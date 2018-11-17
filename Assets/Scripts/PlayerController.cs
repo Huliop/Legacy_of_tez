@@ -1,0 +1,230 @@
+﻿using UnityEngine;
+using UnityEngine.UI;
+using System.Collections;
+
+public class PlayerController : MonoBehaviour
+{
+
+    public float speed = 0.5f;
+    public Camera mainCamera;
+    public Camera manageCamera;
+    public UIManager uiManager;
+    public VillageManager villageManager;
+    public DisplaySystem dispSys;
+
+
+    private bool canCollect = false;
+    private bool manageMode = false;
+    private Animator animator;
+    private Vector3 villageCenter;
+    public float villageSize = 200;
+
+    public int maxGold = 1000;
+    public int maxWood = 800;
+    public int maxStone = 500;
+    public int gold = 150;
+    public int wood = 50;
+    public int stone = 20;
+    public int ATK = 10;
+    public int DEF = 10;
+
+
+    void Start()
+    {
+        villageCenter = GameObject.FindGameObjectWithTag("village").transform.position;
+        mainCamera.enabled = true;
+        manageCamera.enabled = false;
+        animator = gameObject.GetComponent<Animator>();
+
+        dispSys.UIManage(false);
+    }
+
+
+
+    void FixedUpdate()
+    {
+        Transform transform = GetComponent<Transform>();
+
+        float mouveHorizontal = Input.GetAxisRaw("Horizontal");
+        float mouveVertical = Input.GetAxisRaw("Vertical");
+
+        if (mouveHorizontal != 0 || mouveVertical != 0) animator.SetBool("Move", true);
+        else animator.SetBool("Move", false);
+
+        Vector3 mouvment = new Vector3(mouveHorizontal*speed, 0, mouveVertical*speed); //C'est à cause de ça que le bonhomme regarde toujours vers le haut quand on arrête de bouger
+        if (mouvment != new Vector3(0,0,0)) transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(mouvment), 0.15F);
+        //transform.Translate(mouvment);
+        transform.Translate(mouvment * speed * Time.deltaTime, Space.World);
+
+        if (manageMode)
+        {
+;            if ((transform.position - villageCenter).magnitude >= villageSize)
+            {
+                OnManageMode(false);
+            }
+
+        }
+
+    }
+
+    void OnTriggerEnter(Collider other)
+
+    {
+        if (other.tag == "Collect_gold" || other.tag == "Collect_wood" || other.tag == "Collect_stone")
+        {
+                Collectable script = (Collectable)other.GetComponent(typeof(Collectable));
+                if (script.getIsEmpty()) dispSys.OpenMessagePanel("-No more ressources-");
+                else dispSys.OpenMessagePanel("-Press P to gather-");
+                canCollect = true;
+        }
+        else if (other.tag == "village" && !manageMode)
+        {
+            dispSys.OpenMessagePanel("-Press M to manage-");
+        }
+
+    }
+
+    void OnTriggerStay(Collider other)
+
+    {
+        if (Input.GetKeyDown(KeyCode.P) && (other.tag == "Collect_gold" || other.tag == "Collect_wood" || other.tag == "Collect_stone"))
+        {
+            Collectable script = (Collectable)other.GetComponent(typeof(Collectable));
+            script.PickRessources();
+            if (script.getIsEmpty()) dispSys.OpenMessagePanel("-No more ressources-");
+            else
+            {
+                dispSys.CloseMessagePanel();
+                dispSys.OpenMessagePanel("-Press P to gather-");
+            }
+        }
+        else if (Input.GetKeyDown(KeyCode.M) && (other.tag == "village"))
+        {
+            dispSys.CloseMessagePanel();
+            OnManageMode(true);
+        }
+
+    }
+
+    void OnTriggerExit(Collider other)
+    {
+        if (other.tag == "Collect_gold" || other.tag == "Collect_wood" || other.tag == "Collect_stone")
+        {
+            dispSys.CloseMessagePanel();
+            canCollect = false;
+        }
+        else if (other.tag == "village")
+        {
+            dispSys.CloseMessagePanel();
+        }
+    }
+
+    public void OnManageMode(bool mngMode)
+    {
+        if (mngMode)
+        {
+            Debug.Log("ManageMode");
+            dispSys.CloseMessagePanel();
+
+            mainCamera.enabled = false;
+            manageCamera.enabled = true;
+
+            dispSys.UIManage(true);
+            manageMode = true;
+            uiManager.setFreeze(true);
+
+            villageManager.setStone(villageManager.getStone() + stone);
+            villageManager.setWood(villageManager.getWood() + wood);
+            setStone(0);
+            setWood(0);
+        }
+        else
+        {
+            Debug.Log("ManageModeExit");
+            mainCamera.enabled = true;
+            manageCamera.enabled = false;
+
+            dispSys.UIManage(false);
+            manageMode = false;
+            uiManager.setFreeze(false);
+        }
+    }
+
+    //---------------//
+    //    SETTERS    //
+    //---------------//
+    public void setMaxGold(int gld)
+    {
+        if (gld >= 1000) maxGold = gld;
+    }
+    public void setMaxWood(int wd)
+    {
+        if (wd >= 800) maxWood = wd;
+    }
+    public void setMaxStone(int st)
+    {
+        if (st >= 500) maxStone = st;
+    }
+    public void setGold(int gld)
+    {
+        if (gld >= 0 && gld <= maxGold) gold = gld;
+    }
+    public void setWood(int wd)
+    {
+        if (wd >= 0 && wd <= maxWood) wood = wd;
+    }
+    public void setStone(int st)
+    {
+        if (st >= 0 && st <= maxStone) stone = st;
+    }
+    public void setATK(int atk)
+    {
+        if (atk >= 0) ATK = atk;
+    }
+    public void setDEF(int def)
+    {
+        if (def >= 0) DEF = def;
+    }
+
+
+    //---------------//
+    //    GETTERS    //
+    //---------------//
+    public int getMaxGold()
+    {
+        return maxGold;
+    }
+    public int getMaxWood()
+    {
+        return maxWood;
+    }
+    public int getMaxStone()
+    {
+        return maxStone;
+    }
+    public int getGold()
+    {
+        return gold;
+    }
+    public int getWood()
+    {
+        return wood;
+    }
+    public int getStone()
+    {
+        return stone;
+    }
+    public bool getManageMode()
+    {
+        return manageMode;
+    }
+    public int getATK()
+    {
+        return ATK;
+    }
+    public int getDEF()
+    {
+        return DEF;
+    }
+
+}
